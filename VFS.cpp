@@ -8,6 +8,7 @@
 #include "MemoryFile.h"
 
 #include <vector>
+#include <io.h>
 
 #define VFS_INTERNAL
 #include "ZipFS.h"
@@ -262,10 +263,12 @@ SeekableFile* OpenPhysicalFile( const char* fullpath )
 
 SeekableFile* OpenSeekableFile( const char* fullpath )
 {
+	std::string fn = MakeFullyQualifiedFileName( fullpath );
+
 	// Try the VFS
-	if ( g_fs.HasFileInZip( fullpath ) )
+	if ( g_fs.HasFileInZip( fn.c_str() ) )
 	{
-		File* f = g_fs.OpenFileFromZip( fullpath );
+		File* f = g_fs.OpenFileFromZip( fn.c_str() );
 		if ( !f )
 		{
 			return nullptr;
@@ -284,8 +287,69 @@ SeekableFile* OpenSeekableFile( const char* fullpath )
 	}
 	else 
 	{
-		return OpenPhysicalFile( fullpath );
+		return OpenGeneralFile( fn.c_str() );
 	}
+}
+
+// Checks if a file exists (returns false for existing directories)
+bool FileExists( const char* path )
+{
+	std::string fn = MakeFullyQualifiedFileName( path );
+
+	if ( g_fs.HasFileInZip( fn.c_str() ) )
+	{
+		return true;
+	}
+
+#ifdef WIN32
+	// Win32
+	if ( _access( fn.c_str(), 6 ) < 0 )
+#else
+	// *nix
+	if ( access( fn.c_str(), 6 ) < 0 )
+#endif
+	{
+		// Failure:
+		return false;
+	}
+
+	FILE * f = nullptr;
+	fopen_s( &f, fn.c_str(), "rb" );
+	if ( f )
+	{
+		// It's a file
+		fclose( f );
+		return true;
+	}
+	return false;
+}
+
+// Checks if a file exists (returns false for existing files)
+bool DirectoryExists( const char* path )
+{
+	std::string fn = MakeFullyQualifiedFileName( path );
+
+#ifdef WIN32
+	// Win32
+	if ( _access( fn.c_str(), 6 ) < 0 )
+#else
+	// *nix
+	if ( access( fn.c_str(), 6 ) < 0 )
+#endif
+	{
+		// Failure:
+		return false;
+	}
+
+	FILE * f = nullptr;
+	fopen_s( &f, fn.c_str(), "rb" );
+	if ( f )
+	{
+		// It's a file
+		fclose( f );
+		return false;
+	}
+	return true;
 }
 
 // Read a whole file

@@ -25,6 +25,12 @@ namespace VFS
 	// to load the zip from anywhere on disk.
 	bool AddZip( const char* path_to_vfs );
 
+	// Checks if a file exists (returns false for existing directories)
+	bool FileExists( const char* path );
+
+	// Checks if a file exists (returns false for existing files)
+	bool DirectoryExists( const char* path );
+
 	// Open a file for reading and return a file pointer to it. You can request that 
 	// the file come from the physical system if you wish.
 	File* OpenFile( const char* path, bool physical_only = false );

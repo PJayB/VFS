@@ -91,7 +91,7 @@ bool ZipFS::HasFile( const char* path )
 {
 	std::string fullpath = MakeFullPath(path);
 	
-	if ( !fullpath.size() || unzLocateFile( m_zipFile, fullpath.c_str(), 2 ) != UNZ_OK )
+	if ( !fullpath.size() || unzLocateFile( m_zipFile, fullpath.c_str(), 0 ) != UNZ_OK )
 	{
 		return false;
 	}
