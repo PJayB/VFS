@@ -34,7 +34,7 @@ namespace VFS
 		bool HasFile( const char* path );
 
 		// Enumerates files under a given path
-		void EnumerateFiles( const char* path, FileListing& out_listing );
+		void EnumerateFiles( const char* path, FileFilter filter );
 
 		const std::string& GetPath() const { return m_path; }
 

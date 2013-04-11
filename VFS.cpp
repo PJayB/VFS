@@ -6,7 +6,6 @@
 #include "GZFile.h"
 #include "NormalFile.h"
 #include "MemoryFile.h"
-#include "Blob.h"
 
 #include <vector>
 
@@ -44,22 +43,9 @@ public:
 		}
 	}
 
-	void SetRoot( const char* root )
+	void SetRoot( const std::string& root )
 	{
-		if ( root && *root )
-		{
-			m_root = root;
-
-			if ( m_root[ m_root.size() - 1 ] != '/' &&
-				 m_root[ m_root.size() - 1 ] != '\\' )
-			{
-				m_root += kPathSep;
-			}
-		}
-		else
-		{
-			m_root = "";
-		}
+		m_root = root;
 	}
 
 	const std::string& GetRoot( )
@@ -111,12 +97,12 @@ public:
 		return false;
 	}
 
-	void EnumerateFiles( const char* path, FileListing& out_listing )
+	void EnumerateFiles( const char* path, FileFilter filter )
 	{
 		for ( std::vector<ZipFS*>::iterator i = m_zips.begin();
 			 i != m_zips.end(); ++i )
 		{
-			(*i)->EnumerateFiles( path, out_listing );
+			(*i)->EnumerateFiles( path, filter );
 		}
 	}
 
@@ -127,6 +113,73 @@ private:
 };
 
 static FileSystems g_fs;
+
+std::string JoinPath( const char* fullpath )
+{
+	if ( !fullpath )
+	{
+		fullpath = "";
+	}
+	
+	const std::string& root = g_fs.GetRoot();
+	if ( root.size() )
+	{
+		if ( strncmp( fullpath, root.c_str(), root.size() ) == 0 )
+			return fullpath;
+
+		return root + fullpath;
+	}
+	else
+	{
+		return fullpath;
+	}
+}
+
+std::string CleanPath( std::string fp, bool directory )
+{
+	// Canonicalize
+	for (size_t i = 0; i < fp.size(); ++i)
+	{
+		if (fp[i] == '\\')
+			fp[i] = '/';
+	}
+
+	// Condense double-//s and other bits
+	size_t fill = 0;
+	for (size_t i = 0; i < fp.size(); ++i)
+	{
+		if (fp[i] == '/' && fp[i+1] == '/')
+			continue;
+
+		fp[i] = fp[fill++];
+	}
+
+	fp[fill] = 0;
+
+	size_t len = strlen(fp.c_str());
+
+	// Update the new size
+	fp.reserve(len+1);
+	fp.resize(len);
+
+	// Make sure we end in a trailing /
+	if (directory && fp[fp.size()-1] != '/')
+	{
+		fp += '/';
+	}
+
+	return fp;
+}
+
+std::string MakeFullyQualifiedFileName( const char* fullpath )
+{
+	return CleanPath( JoinPath( fullpath ), false );
+}
+
+std::string MakeFullyQualifiedPath( const char* fullpath )
+{
+	return CleanPath( JoinPath( fullpath ), true );
+}
 
 /*
 	TODO - make this better
@@ -152,12 +205,17 @@ SeekableFile* OpenGeneralFile(const char* fullpath)
 
 void SetRootDirectory( const char* root )
 {
-	g_fs.SetRoot( root );
+	g_fs.SetRoot( CleanPath( root, true ) );
 }
 
-bool AddZip( const char* path_to_vfs, bool fully_qualified )
+const char* GetRootDirectory()
 {
-	std::string fullpath = fully_qualified ? path_to_vfs : MakeFullPath( path_to_vfs );
+	return g_fs.GetRoot().c_str(); 
+}
+
+bool AddZip( const char* path_to_vfs )
+{
+	std::string fullpath = MakeFullyQualifiedFileName( path_to_vfs );
 
 	if ( g_fs.FindZip( fullpath.c_str() ) )
 	{
@@ -172,11 +230,7 @@ bool AddZip( const char* path_to_vfs, bool fully_qualified )
 	}
 
 	// Get the prepend path
-	std::string prepend;
-	if ( !fully_qualified )
-	{
-		prepend = BasePath( path_to_vfs );
-	}
+	std::string prepend = BasePath( path_to_vfs );
 
 	// Push it to the list of zips
 	g_fs.AddZipFS( new ZipFS( fullpath.c_str(), zipFile, prepend ) );
@@ -186,22 +240,24 @@ bool AddZip( const char* path_to_vfs, bool fully_qualified )
 
 File* OpenFile( const char* fullpath, bool physical_only )
 {
+	std::string fn = MakeFullyQualifiedFileName( fullpath );
+
 	if ( !physical_only )
 	{
 		// Try and find the file in the virtual file systems
-		File* f = g_fs.OpenFileFromZip( fullpath );
+		File* f = g_fs.OpenFileFromZip( fn.c_str() );
 		if ( f )
 		{
 			return f;
 		}
 	}
 
-	return OpenGeneralFile( MakeFullPath( fullpath ).c_str() );
+	return OpenGeneralFile( fn.c_str() );
 }
 
 SeekableFile* OpenPhysicalFile( const char* fullpath )
 {
-	return OpenGeneralFile( MakeFullPath( fullpath ).c_str() );
+	return OpenGeneralFile( MakeFullyQualifiedFileName( fullpath ).c_str() );
 }
 
 SeekableFile* OpenSeekableFile( const char* fullpath )
@@ -232,33 +288,6 @@ SeekableFile* OpenSeekableFile( const char* fullpath )
 	}
 }
 
-std::string JoinPath( const char* fullpath )
-{
-	if ( !fullpath )
-	{
-		fullpath = "";
-	}
-	
-	if ( g_fs.GetRoot().size() )
-	{
-		return g_fs.GetRoot() + fullpath;
-	}
-	else
-	{
-		return fullpath;
-	}
-}
-
-std::string MakeFullPath( const char* fullpath )
-{
-	std::string fp = JoinPath( fullpath );
-
-	// Condense double-//s and other bits
-
-	// Make sure we end in a trailing /
-	todo
-}
-
 // Read a whole file
 bool ReadWholeTextFile(const char* fullpath, std::string& out)
 {
@@ -287,7 +316,7 @@ bool ReadWholeTextFile(const char* fullpath, std::string& out)
 }
 
 // Read a whole file. Free the blob afterwards.
-bool ReadWholeBinaryFile(const char* fullpath, VFSTools::Blob** out)
+bool ReadWholeBinaryFile(const char* fullpath, std::vector<uint8_t>& out)
 {
 	File* file = OpenFile(fullpath);
 	if ( !file )
@@ -302,28 +331,21 @@ bool ReadWholeBinaryFile(const char* fullpath, VFSTools::Blob** out)
 		return false;
 	}
 
-	// Allocate space for it
-	*out = VFSTools::Blob::Create(size);
-	if ( !*out )
-	{
-		return false;
-	}
+	out.resize(size);
 
-	// Read the data
-	uint32_t r = file->Read( ( *out )->m_Data, size );
+	uint32_t r = file->Read( &out[0], size );
 
 	CloseFile(file);
 
 	if ( r != size )
 	{
-		VFSTools::Blob::Free(*out);
 		return false;
 	}
 
 	return true;
 }
 
-void EnumeratePhysicalFiles( const std::string& path, FileListing& out_listing )
+void EnumeratePhysicalFiles( const std::string& path, FileFilter filter )
 {
 #ifdef WIN32
 	WIN32_FIND_DATA ffd;
@@ -342,11 +364,11 @@ void EnumeratePhysicalFiles( const std::string& path, FileListing& out_listing )
 		if ( ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
 		{
 			// Recurse
-			EnumeratePhysicalFiles( path + ffd.cFileName + '/', out_listing );
+			EnumeratePhysicalFiles( path + ffd.cFileName + '/', filter );
 		}
 		else
 		{
-			out_listing.insert( path + ffd.cFileName );
+			filter( ( path + ffd.cFileName ).c_str() );
 		}
 	}
 	while ( ::FindNextFileA( hFind, &ffd ) != 0 );
@@ -357,16 +379,16 @@ void EnumeratePhysicalFiles( const std::string& path, FileListing& out_listing )
 #endif
 }
 
-void EnumerateFiles( const char* path, FileListing& out_listing, bool physical_only )
+void EnumerateFiles( const char* path, FileFilter filter, bool physical_only )
 {
-	std::string fp = MakeFullPath( path );
+	std::string fp = MakeFullyQualifiedPath( path );
 
 	if ( !physical_only )
 	{
-		g_fs.EnumerateFiles( fp.c_str(), out_listing );
+		g_fs.EnumerateFiles( fp.c_str(), filter );
 	}
 
-	EnumeratePhysicalFiles( fp.c_str(), out_listing );
+	EnumeratePhysicalFiles( fp.c_str(), filter );
 }
 
 }

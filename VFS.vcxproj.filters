@@ -36,9 +36,6 @@
     <ClInclude Include="StreamingFile.h">
       <Filter>File Handlers</Filter>
     </ClInclude>
-    <ClInclude Include="Blob.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="FileUtils.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -77,9 +74,6 @@
     </ClCompile>
     <ClCompile Include="StreamingFile.cpp">
       <Filter>File Handlers</Filter>
-    </ClCompile>
-    <ClCompile Include="Blob.cpp">
-      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="FileUtils.cpp">
       <Filter>Utilities</Filter>

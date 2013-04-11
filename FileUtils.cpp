@@ -8,7 +8,8 @@
  */
 
 #include "FileUtils.h"
-#include "Blob.h"
+
+#include <direct.h>
 
 namespace VFS
 {
@@ -65,11 +66,24 @@ std::string ReplaceExtension(std::string in, const char* const extension)
 	std::string::size_type dotPos = in.find_last_of(".");
 	if (dotPos == std::string::npos)
 	{
-		return in + "." + extension;
+		return in + extension;
 	}
 	
 	// Replace the string
-	return in.substr(0, dotPos + 1) + extension;
+	return in.substr(0, dotPos) + extension;
+}
+
+bool MakeNestedDirectories(const std::string& path)
+{
+	int last_return_value = 0;
+
+	std::string::size_type i = 0;
+	while ( ( i = path.find_first_of("\\/", i+1) ) != std::string::npos )
+	{
+		std::string subpath = path.substr(0, i);
+		last_return_value = _mkdir(subpath.c_str());
+	}
+	return last_return_value != -1;
 }
 
 }

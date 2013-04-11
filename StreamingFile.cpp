@@ -8,7 +8,6 @@
  */
 
 #include "StreamingFile.h"
-#include "Blob.h"
 #include "FileUtils.h"
 #include "File.h"
 

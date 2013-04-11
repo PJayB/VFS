@@ -156,7 +156,6 @@
     <ClInclude Include="GZFile.h" />
     <ClInclude Include="NormalFile.h" />
     <ClInclude Include="StreamingFile.h" />
-    <ClInclude Include="Blob.h" />
     <ClInclude Include="FileUtils.h" />
     <ClInclude Include="MemoryStream.h" />
     <ClInclude Include="ZipFS.h" />
@@ -172,7 +171,6 @@
     <ClCompile Include="GZFile.cpp" />
     <ClCompile Include="NormalFile.cpp" />
     <ClCompile Include="StreamingFile.cpp" />
-    <ClCompile Include="Blob.cpp" />
     <ClCompile Include="FileUtils.cpp" />
     <ClCompile Include="MemoryStream.cpp" />
     <ClCompile Include="ZipFS.cpp" />

@@ -26,8 +26,11 @@ std::string BasePath(const std::string& in);
 // Get the file extension
 std::string GetExtension(const std::string& in);
 
-// Replace an extension
+// Replace an extension. Make sure to provide extension with a leading dot!
 std::string ReplaceExtension(std::string in, const char* const extension);
+
+// Make a deep path
+bool MakeNestedDirectories(const std::string& path);
 
 }
 

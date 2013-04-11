@@ -17,10 +17,13 @@ namespace VFS
 	// Set the root directory for all default file reads.
 	void SetRootDirectory( const char* root );
 
+	// Get the root directory
+	const char* GetRootDirectory();
+
 	// Mount a zip fs at a path. By default it loads it from the value passed to
 	// SetRootDirectory. If you already have a fully qualified path, specify this
 	// to load the zip from anywhere on disk.
-	bool AddZip( const char* path_to_vfs, bool fully_qualified = false );
+	bool AddZip( const char* path_to_vfs );
 
 	// Open a file for reading and return a file pointer to it. You can request that 
 	// the file come from the physical system if you wish.
@@ -39,19 +42,28 @@ namespace VFS
 	// Note, this will ONLY return a full path within the default
 	// file system mount point. It will NEVER return a file path
 	// valid for a virtualized file system.
-	std::string MakeFullPath( const char* path );
+	std::string MakeFullyQualifiedFileName( const char* path );
+
+	// Returns the fully qualified path name for a DIRECTORY, including trailing /.
+	// Note, this will ONLY return a full path within the default
+	// file system mount point. It will NEVER return a file path
+	// valid for a virtualized file system.
+	std::string MakeFullyQualifiedPath( const char* path );
 
 	// Read a whole file
 	bool ReadWholeTextFile( const char* fullpath, std::string& out );
 
 	// Read a whole file. Free the blob afterwards.
-	bool ReadWholeBinaryFile( const char* fullpath, VFSTools::Blob** out );
+	bool ReadWholeBinaryFile( const char* fullpath, std::vector<uint8_t>& out );
+
+	// Handy structure for storing lists of files without dupes
+	typedef std::unordered_set<std::string> FileListing;
 
 	// Enumerates a directory for all subfiles and folders
-	typedef std::unordered_set<std::string> FileListing;
+	typedef std::function<void (const char*)> FileFilter;
 	void EnumerateFiles( 
 		const char* path, 
-		FileListing& out_listing, 
+		FileFilter filter, 
 		bool physical_only = false );
 };
 
