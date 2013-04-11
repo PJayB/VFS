@@ -107,6 +107,41 @@ void ZipFS::CloseFile( ZipFile* zf )
 	m_openFile = nullptr;
 }
 
+void ZipFS::EnumerateFiles( const char* path, FileListing& out_listing )
+{
+	std::string fullpath = MakeFullPath(path);
+	
+	if ( !fullpath.size() )
+		return;
+
+	unz_saved_state zstate;
+	unzSaveState( m_zipFile, &zstate );
+
+    int err = unzGoToFirstFile( m_zipFile );
+
+    while (err == UNZ_OK)
+    {
+        char szCurrentFileName[256];
+        err = unzGetCurrentFileInfo( 
+			m_zipFile,
+			NULL,                
+			szCurrentFileName,
+			sizeof(szCurrentFileName)-1,
+			NULL,
+			0,
+			NULL,
+			0);
+
+        if (err == UNZ_OK)
+        {
+            // TODO
+            err = unzGoToNextFile( m_zipFile );
+        }
+    }
+
+    unzRestoreState( m_zipFile, &zstate );
+}
+
 ZipFile::ZipFile( ZipFS* fs, unzFile f )
 : m_zipFile( f )
 , m_parent( fs )

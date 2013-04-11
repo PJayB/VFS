@@ -13,7 +13,10 @@
 #define VFS_INTERNAL
 #include "ZipFS.h"
 
-#include "Math.h"
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
 
 #ifdef RF_WIN32
 #define kPathSep '\\'
@@ -106,6 +109,15 @@ public:
 			}
 		}
 		return false;
+	}
+
+	void EnumerateFiles( const char* path, FileListing& out_listing )
+	{
+		for ( std::vector<ZipFS*>::iterator i = m_zips.begin();
+			 i != m_zips.end(); ++i )
+		{
+			(*i)->EnumerateFiles( path, out_listing );
+		}
 	}
 
 private:
@@ -220,7 +232,7 @@ SeekableFile* OpenSeekableFile( const char* fullpath )
 	}
 }
 
-std::string MakeFullPath( const char* fullpath )
+std::string JoinPath( const char* fullpath )
 {
 	if ( !fullpath )
 	{
@@ -235,6 +247,16 @@ std::string MakeFullPath( const char* fullpath )
 	{
 		return fullpath;
 	}
+}
+
+std::string MakeFullPath( const char* fullpath )
+{
+	std::string fp = JoinPath( fullpath );
+
+	// Condense double-//s and other bits
+
+	// Make sure we end in a trailing /
+	todo
 }
 
 // Read a whole file
@@ -253,7 +275,7 @@ bool ReadWholeTextFile(const char* fullpath, std::string& out)
 	do 
 	{
 		char text[257];
-		uint32_t r = file->Read(text, std::min(256, fileSize));
+		uint32_t r = file->Read(text, min(256, fileSize));
 		
 		text[r] = 0;
 		out += text;
@@ -299,6 +321,52 @@ bool ReadWholeBinaryFile(const char* fullpath, VFSTools::Blob** out)
 	}
 
 	return true;
+}
+
+void EnumeratePhysicalFiles( const std::string& path, FileListing& out_listing )
+{
+#ifdef WIN32
+	WIN32_FIND_DATA ffd;
+
+	std::string search = path + "*";
+
+	HANDLE hFind = ::FindFirstFileA( search.c_str(), &ffd );
+	if ( hFind == INVALID_HANDLE_VALUE )
+		return;
+
+	do
+	{
+		if ( *ffd.cFileName == '.' )
+			continue;
+
+		if ( ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
+		{
+			// Recurse
+			EnumeratePhysicalFiles( path + ffd.cFileName + '/', out_listing );
+		}
+		else
+		{
+			out_listing.insert( path + ffd.cFileName );
+		}
+	}
+	while ( ::FindNextFileA( hFind, &ffd ) != 0 );
+
+	::FindClose( hFind );
+#else
+#	error TODO
+#endif
+}
+
+void EnumerateFiles( const char* path, FileListing& out_listing, bool physical_only )
+{
+	std::string fp = MakeFullPath( path );
+
+	if ( !physical_only )
+	{
+		g_fs.EnumerateFiles( fp.c_str(), out_listing );
+	}
+
+	EnumeratePhysicalFiles( fp.c_str(), out_listing );
 }
 
 }

@@ -4,6 +4,8 @@
 
 #include "File.h"
 #include <string>
+#include <functional>
+#include <unordered_set>
 
 namespace VFSTools
 {
@@ -44,6 +46,13 @@ namespace VFS
 
 	// Read a whole file. Free the blob afterwards.
 	bool ReadWholeBinaryFile( const char* fullpath, VFSTools::Blob** out );
+
+	// Enumerates a directory for all subfiles and folders
+	typedef std::unordered_set<std::string> FileListing;
+	void EnumerateFiles( 
+		const char* path, 
+		FileListing& out_listing, 
+		bool physical_only = false );
 };
 
 #endif

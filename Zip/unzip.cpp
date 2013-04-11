@@ -90,12 +90,6 @@ woven in by Terry Thorsen 1/2003.
 const char unz_copyright[] =
    " unzip 1.01 Copyright 1998-2004 Gilles Vollant - http://www.winimage.com/zLibDll";
 
-/* unz_file_info_interntal contain internal info about a file in zipfile*/
-typedef struct unz_file_info_internal_s
-{
-    uLong offset_curfile;/* relative offset of local header 4 bytes */
-} unz_file_info_internal;
-
 
 /* file_in_zip_read_info_s contain internal information about a file in zipfile,
     when reading and decompress it */
@@ -769,6 +763,40 @@ extern int ZEXPORT unzGoToNextFile (unzFile file)
     return err;
 }
 
+extern int ZEXPORT unzSaveState (unzFile file, unz_saved_state* pState)
+{
+    if (file==NULL)
+        return UNZ_PARAMERROR;
+
+    unz_s* s=(unz_s*)file;
+    if (!s->current_file_ok)
+        return UNZ_END_OF_LIST_OF_FILE;
+
+    /* Save the current state */
+    pState->num_fileSaved = s->num_file;
+    pState->pos_in_central_dirSaved = s->pos_in_central_dir;
+    pState->cur_file_infoSaved = s->cur_file_info;
+    pState->cur_file_info_internalSaved = s->cur_file_info_internal;
+
+	return UNZ_OK;
+}
+
+extern int ZEXPORT unzRestoreState (unzFile file, unz_saved_state* pState)
+{
+    if (file==NULL)
+        return UNZ_PARAMERROR;
+
+    unz_s* s=(unz_s*)file;
+    if (!s->current_file_ok)
+        return UNZ_END_OF_LIST_OF_FILE;
+
+    s->num_file = pState->num_fileSaved ;
+    s->pos_in_central_dir = pState->pos_in_central_dirSaved ;
+    s->cur_file_info = pState->cur_file_infoSaved;
+    s->cur_file_info_internal = pState->cur_file_info_internalSaved;
+
+	return UNZ_OK;
+}
 
 /*
   Try locate the file szFileName in the zipfile.

@@ -119,6 +119,24 @@ typedef struct unz_file_info_s
     tm_unz tmu_date;
 } unz_file_info;
 
+/* unz_file_info_interntal contain internal info about a file in zipfile*/
+typedef struct unz_file_info_internal_s
+{
+    uLong offset_curfile;/* relative offset of local header 4 bytes */
+} unz_file_info_internal;
+
+typedef struct unz_saved_state_s
+{
+    unz_file_info cur_file_infoSaved;
+    unz_file_info_internal cur_file_info_internalSaved;
+    uLong num_fileSaved;
+    uLong pos_in_central_dirSaved;
+} unz_saved_state;
+
+extern int ZEXPORT unzSaveState (unzFile file, unz_saved_state* pState);
+extern int ZEXPORT unzRestoreState (unzFile file, unz_saved_state* pState);
+
+
 extern int ZEXPORT unzStringFileNameCompare OF ((const char* fileName1,
                                                  const char* fileName2,
                                                  int iCaseSensitivity));

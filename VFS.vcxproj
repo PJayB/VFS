@@ -179,7 +179,7 @@
     <ClCompile Include="VFS.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\3pp\zlib\zlib.vcxproj">
+    <ProjectReference Include="..\zlib\zlib.vcxproj">
       <Project>{ea17a9a2-3380-4791-b556-9710a681ceb0}</Project>
     </ProjectReference>
   </ItemGroup>
