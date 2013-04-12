@@ -32,6 +32,36 @@ ZipFS::ZipFS( const char* path, unzFile zipFile, const std::string& prepend )
 , m_basePath( prepend )
 {
 	ReplaceSlashes( m_basePath );
+
+	// Enumerate all the files and build a map
+	int err = unzGoToFirstFile( m_zipFile );
+	while ( err == UNZ_OK )
+	{
+		char szFileName[ _MAX_PATH ];
+
+		err = unzGetCurrentFileInfo(
+			m_zipFile, 
+			nullptr,
+			szFileName, 
+			sizeof( szFileName ),
+			nullptr,
+			0,
+			nullptr,
+			0 );
+		if ( err != UNZ_OK )
+			break;
+
+		unz_file_pos filePos;
+		err = unzGetFilePos(
+			m_zipFile,
+			&filePos );
+		if ( err != UNZ_OK )
+			break;
+
+		m_index[ szFileName ] = filePos;
+
+		err = unzGoToNextFile( m_zipFile );
+	}
 }
 
 ZipFS::~ZipFS( )
@@ -77,12 +107,15 @@ File* ZipFS::OpenFile( const char* path )
 	}
 
 	std::string fullpath = MakeFullPath(path);
-	
-	if ( !fullpath.size() || unzLocateFile( m_zipFile, fullpath.c_str(), 2 ) != UNZ_OK )
-	{
+	if ( !fullpath.size() )
 		return nullptr;
-	}
 
+	FileStateMap::const_iterator filePos = m_index.find( fullpath );
+	if ( filePos == std::end( m_index ) )
+		return nullptr;
+
+	unzGoToFilePos( m_zipFile, (unz_file_pos*) &filePos->second );
+	
 	m_openFile = new ZipFile( this, m_zipFile );
 	return m_openFile;
 }
@@ -90,11 +123,12 @@ File* ZipFS::OpenFile( const char* path )
 bool ZipFS::HasFile( const char* path )
 {
 	std::string fullpath = MakeFullPath(path);
-	
-	if ( !fullpath.size() || unzLocateFile( m_zipFile, fullpath.c_str(), 0 ) != UNZ_OK )
-	{
-		return false;
-	}
+	if ( !fullpath.size() )
+		return nullptr;
+
+	FileStateMap::const_iterator filePos = m_index.find( fullpath );
+	if ( filePos == std::end( m_index ) )
+		return nullptr;
 	
 	return true;
 }
@@ -132,6 +166,7 @@ void ZipFS::EnumerateFiles( const char* path, FileFilter filter )
 		return;
 	}
 	
+	/*
 	unz_saved_state zstate;
 	unzSaveState( m_zipFile, &zstate );
 
@@ -168,6 +203,17 @@ void ZipFS::EnumerateFiles( const char* path, FileFilter filter )
     }
 
     unzRestoreState( m_zipFile, &zstate );
+	*/
+
+	for (auto& fileEntry : m_index)
+	{
+        // if it's not top level, we need to filter based on path
+		if ( !filter_path.size() || strncmp( fileEntry.first.c_str(), filter_path.c_str(), filter_path.size() ) == 0 )
+		{
+			// It's a match!
+			filter( ( m_basePath + fileEntry.first ).c_str() );
+		}
+	}
 }
 
 ZipFile::ZipFile( ZipFS* fs, unzFile f )

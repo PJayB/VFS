@@ -9,6 +9,7 @@
 #include "VFS.h"
 #include "File.h"
 #include <string>
+#include <map>
 
 #include "Zip/unzip.h"
 
@@ -40,12 +41,15 @@ namespace VFS
 
 	private:
 	
+		typedef std::map<std::string, unz_file_pos> FileStateMap;
+
 		std::string		MakeFullPath( const char* path );
 
 		std::string		m_path;
 		unzFile			m_zipFile;
 		ZipFile*		m_openFile;
 		std::string		m_basePath;
+		FileStateMap	m_index;
 	};
 
 	class ZipFile : public File

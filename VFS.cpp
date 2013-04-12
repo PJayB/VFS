@@ -146,13 +146,13 @@ std::string CleanPath( std::string fp, bool directory )
 	}
 
 	// Condense double-//s and other bits
-	size_t fill = 0;
-	for (size_t i = 0; i < fp.size(); ++i)
+	size_t fill = 1;
+	for (size_t i = 1; i < fp.size(); ++i)
 	{
-		if (fp[i] == '/' && fp[i+1] == '/')
+		if (fp[i-1] == '/' && fp[i] == '/')
 			continue;
 
-		fp[i] = fp[fill++];
+		fp[fill++] = fp[i];
 	}
 
 	fp[fill] = 0;
@@ -362,6 +362,8 @@ bool ReadWholeTextFile(const char* fullpath, std::string& out)
 	}
 	
 	int32_t fileSize = (int32_t)file->GetFileSize();
+
+	out.reserve( out.size() + fileSize );
 
 	// Keep reading until we can't read no more.
 	out = "";
