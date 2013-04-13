@@ -366,7 +366,6 @@ bool ReadWholeTextFile(const char* fullpath, std::string& out)
 	out.reserve( out.size() + fileSize );
 
 	// Keep reading until we can't read no more.
-	out = "";
 	do 
 	{
 		char text[257];
